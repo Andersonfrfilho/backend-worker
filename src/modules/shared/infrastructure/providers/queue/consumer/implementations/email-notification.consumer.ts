@@ -1,15 +1,18 @@
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Controller, Injectable, Logger } from '@nestjs/common';
+import { AsyncApiSub } from 'nestjs-asyncapi';
 
 import type {
   MessageConsumerInterface,
   ConsumerMessage,
   ConsumerResult,
 } from '../consumer.interface';
+import { EmailNotificationMessage } from '../dto/consumer-messages.dto';
 
+@Controller()
 @Injectable()
 export class EmailNotificationConsumer implements MessageConsumerInterface {
-  private readonly logger = new Logger(EmailNotificationConsumer.name);
+  constructor(private readonly logger: Logger) {}
 
   getId(): string {
     return 'email-notification-consumer';
@@ -23,6 +26,39 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
     exchange: 'notifications',
     routingKey: 'email.notifications',
     queue: 'email-notifications-queue',
+  })
+  @AsyncApiSub({
+    channel: 'email.notifications',
+    summary: 'Envio de E-mails Transacionais',
+    description:
+      'Este worker é responsável por processar a fila de e-mails e integrar com o provedor de SMTP.\n\n' +
+      '### Detalhes Técnicos\n' +
+      '| Atributo | Valor |\n' +
+      '| :--- | :--- |\n' +
+      '| **Exchange** | `notifications` (topic) |\n' +
+      '| **Routing Key** | `email.notifications` |\n' +
+      '| **Queue** | `email-notifications-queue` |\n' +
+      '| **Retry Strategy** | 3 tentativas com Backoff Exponencial |\n\n' +
+      '### Fluxos Suportados\n' +
+      '- `user-welcome`: Boas-vindas para novos usuários.\n' +
+      '- `password-reset`: Link para recuperação de senha.\n' +
+      '- `system-alert`: Notificações críticas de segurança.\n\n' +
+      '### Exemplo de Teste (cURL)\n' +
+      '```bash\n' +
+      'curl -u guest:guest -H "Content-Type: application/json" -X POST \\\n' +
+      '  -d \'{"properties":{},"routing_key":"email.notifications","payload":"{\\"type\\":\\"user-welcome\\",\\"userId\\":\\"123\\",\\"email\\":\\"welcome@teste.com\\"}",\\"payload_encoding\\":\\"string\\"}\' \\\n' +
+      '  http://localhost:15672/api/exchanges/%2f/notifications/publish\n' +
+      '```',
+    message: {
+      name: 'EmailNotificationMessage',
+      payload: EmailNotificationMessage,
+    },
+    operationId: 'handleEmailNotification',
+    bindings: {
+      amqp: {
+        ack: true,
+      },
+    },
   })
   async handleMessage(message: ConsumerMessage): Promise<ConsumerResult> {
     try {

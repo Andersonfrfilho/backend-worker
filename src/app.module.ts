@@ -3,12 +3,10 @@ import { register as tsConfigPathsRegister } from 'tsconfig-paths';
 
 import { ConfigModule } from '@config/config.module';
 import { ErrorModule } from '@modules/error/error.module';
-import { NotificationModule } from '@modules/notification/notification.module';
 
 import * as tsConfig from '../tsconfig.json';
 
 import { SharedModule } from './modules/shared/shared.module';
-import { UserModule } from './modules/user/user.module';
 
 const compilerOptions = tsConfig.compilerOptions;
 tsConfigPathsRegister({
@@ -17,6 +15,6 @@ tsConfigPathsRegister({
 });
 
 @Module({
-  imports: [ConfigModule, NotificationModule, SharedModule, ErrorModule, UserModule],
+  imports: [ConfigModule, SharedModule, ErrorModule],
 })
 export class AppModule {}

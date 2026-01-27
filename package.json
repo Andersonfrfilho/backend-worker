@@ -57,6 +57,7 @@
     "joi": "^17.13.3",
     "mongodb": "^6.21.0",
     "nest-winston": "^1.10.2",
+    "nestjs-asyncapi": "^1.4.0",
     "nestjs-redox": "^2.3.0",
     "pg": "^8.16.3",
     "redoc": "^2.5.2",
@@ -96,5 +97,9 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

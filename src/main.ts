@@ -1,6 +1,7 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AsyncApiModule, AsyncApiDocumentBuilder } from 'nestjs-asyncapi';
 import { register as tsConfigPathsRegister } from 'tsconfig-paths';
 
 import { AppErrorFactory } from '@modules/error';
@@ -18,25 +19,43 @@ tsConfigPathsRegister({
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      forbidUnknownValues: false,
-      forbidNonWhitelisted: false,
-      transform: true,
-      whitelist: true,
-      skipMissingProperties: false,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      exceptionFactory: (errors) => AppErrorFactory.fromValidationErrors(errors),
-    }),
-  );
-
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  // Como é um worker, não precisamos de servidor HTTP
-  // Os consumidores RabbitMQ serão iniciados automaticamente
-  await app.init();
+  const configService = app.get(ConfigService);
+  const rabbitHost = configService.get('QUEUE_RABBITMQ_HOST') || 'localhost';
+  const rabbitPort = configService.get('QUEUE_RABBITMQ_PORT') || '5672';
+  const rabbitUser = configService.get('QUEUE_RABBITMQ_USER') || 'guest';
+
+  // Configurar documentação AsyncAPI de forma profissional
+  const asyncApiOptions = new AsyncApiDocumentBuilder()
+    .setTitle('Backend Worker - RabbitMQ')
+    .setDescription(
+      'Documentação técnica dos consumers (workers) que processam eventos via RabbitMQ.\n\n' +
+        '### Topologia de Mensageria\n' +
+        'Esta aplicação atua como um Worker consumindo mensagens de múltiplas exchanges. ' +
+        'Utilize as abas abaixo para explorar os canais e payloads.',
+    )
+    .setVersion('1.0.0')
+    .setDefaultContentType('application/json')
+    .addServer('rabbitmq-broker', {
+      url: `${rabbitHost}:${rabbitPort}`,
+      protocol: 'amqp',
+      description: 'Broker RabbitMQ principal',
+      variables: {
+        user: {
+          default: rabbitUser,
+          description: 'Usuário de conexão',
+        },
+      },
+    })
+    .build();
+
+  const asyncapiDocument = await AsyncApiModule.createDocument(app, asyncApiOptions);
+  await AsyncApiModule.setup('docs', app, asyncapiDocument);
+
+  // Iniciar servidor HTTP para servir a documentação
+  await app.listen(3005);
+  console.log('🚀 Worker iniciado com documentação AsyncAPI em http://localhost:3005/docs');
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

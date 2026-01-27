@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 
 import { AuditEventConsumer } from './consumer/implementations/audit-event.consumer';
 import { CrmSyncConsumer } from './consumer/implementations/crm-sync.consumer';
@@ -7,7 +7,15 @@ import { SharedInfrastructureProviderQueueProducerModule } from './producer/prod
 
 @Module({
   imports: [SharedInfrastructureProviderQueueProducerModule],
-  providers: [EmailNotificationConsumer, AuditEventConsumer, CrmSyncConsumer],
+  providers: [
+    {
+      provide: Logger,
+      useValue: new Logger('QueueConsumers'),
+    },
+    EmailNotificationConsumer,
+    AuditEventConsumer,
+    CrmSyncConsumer,
+  ],
   exports: [SharedInfrastructureProviderQueueProducerModule],
 })
 export class SharedInfrastructureProviderQueueModule {}

@@ -1,7 +1,8 @@
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { Controller, Injectable, Logger } from '@nestjs/common';
+import { Controller, Injectable, Logger, UsePipes } from '@nestjs/common';
 import { AsyncApiSub } from 'nestjs-asyncapi';
 
+import { RabbitMQValidationPipe } from '../../pipes/rabbitmq-validation.pipe';
 import type {
   MessageConsumerInterface,
   ConsumerMessage,
@@ -11,7 +12,9 @@ import { EmailNotificationMessage } from '../dto/consumer-messages.dto';
 
 @Controller()
 @Injectable()
-export class EmailNotificationConsumer implements MessageConsumerInterface {
+export class EmailNotificationConsumer
+  implements MessageConsumerInterface<EmailNotificationMessage>
+{
   constructor(private readonly logger: Logger) {}
 
   getId(): string {
@@ -27,6 +30,7 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
     routingKey: 'email.notifications',
     queue: 'email-notifications-queue',
   })
+  @UsePipes(new RabbitMQValidationPipe())
   @AsyncApiSub({
     channel: 'email.notifications',
     summary: 'Envio de E-mails Transacionais',
@@ -60,19 +64,20 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
       },
     },
   })
-  async handleMessage(message: ConsumerMessage): Promise<ConsumerResult> {
+  async handleMessage(message: ConsumerMessage<EmailNotificationMessage>): Promise<ConsumerResult> {
     try {
       this.logger.log(`Processing email notification: ${JSON.stringify(message.body)}`);
 
       // Aqui você implementa a lógica para enviar email
       // Ex.: usar um serviço de email como SendGrid, SES, etc.
 
-      const { type, userId, email, name, template } = message.body;
+      const { type, userId, email } = message.body;
 
       if (type === 'user-welcome') {
         // Enviar email de boas-vindas
         this.logger.log(`Sending welcome email to ${email} for user ${userId}`);
         // TODO: Integrar com serviço de email
+        await Promise.resolve(); // Placeholder para futura integração assíncrona
       }
 
       return {
@@ -88,7 +93,7 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
     }
   }
 
-  async process(message: ConsumerMessage): Promise<ConsumerResult> {
+  async process(message: ConsumerMessage<EmailNotificationMessage>): Promise<ConsumerResult> {
     return this.handleMessage(message);
   }
 
@@ -97,6 +102,7 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
       `Handling error for message: ${message.metadata?.correlationId}`,
       error.stack,
     );
+    await Promise.resolve(); // Placeholder para futura lógica assíncrona
     return {
       success: false,
       error,
@@ -106,7 +112,7 @@ export class EmailNotificationConsumer implements MessageConsumerInterface {
 
   async isHealthy(): Promise<boolean> {
     // Verificar se o serviço de email está disponível
-    return true;
+    return await Promise.resolve(true);
   }
 
   getMetrics() {

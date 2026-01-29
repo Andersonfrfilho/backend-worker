@@ -20,6 +20,24 @@ if (!validCommands.includes(command)) {
 }
 
 try {
+  // Para o comando 'run', verificar se há migrations pendentes antes de executar
+  if (command === 'run') {
+    console.log('🔍 Verificando migrations pendentes...');
+    const showCmd = `${executor} ./node_modules/typeorm/cli.js migration:show -d ${dataSourcePath}`;
+    const showOutput = execSync(showCmd, { encoding: 'utf8', stdio: 'pipe' });
+
+    // Verificar se há migrations pendentes ([ ] indica pendente)
+    const hasPending = showOutput.includes('[ ]');
+
+    if (!hasPending) {
+      console.log('✅ Nenhuma migração pendente encontrada. Pulando execução.');
+      process.exit(0);
+    }
+
+    console.log('📋 Migrations pendentes encontradas:');
+    console.log(showOutput);
+  }
+
   const cmd = `${executor} ./node_modules/typeorm/cli.js migration:${command} -d ${dataSourcePath}`;
   console.log(`📍 NODE_ENV=${process.env.NODE_ENV || 'development'} → ${dataSourcePath}`);
 

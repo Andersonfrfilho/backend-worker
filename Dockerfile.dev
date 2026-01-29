@@ -3,6 +3,8 @@ FROM node:25-alpine AS builder
 
 WORKDIR /app
 
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 COPY package*.json ./
 
 RUN npm ci
@@ -42,6 +44,6 @@ RUN sed -i 's/"deleteOutDir": true/"deleteOutDir": false/' nest-cli.json
 # Cria pasta de logs
 RUN mkdir -p logs
 
-# DESENVOLVIMENTO: Roda migrations automáticamente + inicia em modo watch
+# DESENVOLVIMENTO: Inicia em modo watch (migrations devem ser executadas manualmente ou via makefile)
 # Nota: deleteOutDir é desabilitado em dev para evitar conflito com dist/ copiado
-CMD ["sh", "-c", "npm run migration:run && npm run start:dev"]
+CMD ["npm", "run", "start:dev"]
